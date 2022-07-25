@@ -5,7 +5,9 @@ from tkinter import * # Para la interfaz grafica
 from tkinter import messagebox # Para los mensajes de alerta emergentes
 import sqlite3 # Para la base de datos que usaremos
 from turtle import right
-import easygui # Para poder hacer un mensaje emergente con un input dialog
+from xml.dom.minidom import Identified
+import easygui
+from more_itertools import padded # Para poder hacer un mensaje emergente con un input dialog
 
 
 
@@ -76,6 +78,20 @@ def borrar_campos():
     
 
 
+# -----------------------------------------------------------------------------------
+def licencia():
+    messagebox.showinfo("Licencia", "Licencia para mataal! ..." 
+    + "naa, es broma, el que lo quiera usar, que lo disfrute :)")
+
+
+
+# -----------------------------------------------------------------------------------
+# Funcion para el Acerca de...
+def acercaDe():
+    messagebox.showinfo("Acerca de...", "Función creada por Jorge Alvarez Ceñal" 
+    + "\nSiguiendo, como siempre, los pasos de Juan Díaz, de Pildoras Informaticas") 
+
+
 # ------------------------------------------------------------------------------------
 # Funcion que abre un cuadro de dialogo en el que pide el ID de un usuario y 
 # devuelve el valor introducido. En el parámetro especificaremos que operacion queremos hacer
@@ -144,7 +160,6 @@ def seleccionarPorId(idElegido):
 # Funcion para pasar un usuario (en formato lista de tuplas) a los campos de la app
 def pasarUsuarioCampos(usuario):
     try:
-        print(usuario)
         if len(usuario) > 0:       
             for dts_usuario in usuario:
                 miId.set(str(dts_usuario[0]))
@@ -191,24 +206,43 @@ def actualizar_registro():
 # Funcion CRUD --> DELETE : Borrar registro
 def borrar_registro():
     idElegido = pedirID("borrar")
-    seguro = messagebox.askyesno("Precaución", f'''Seguro que quieres borrar el registro {idElegido}?
-    Almacena los datos: {sacar_usuario_txt(idElegido)}''')
-    
-    if seguro == 1: # askyesno devuelve 1 como yes y vacio como no
-        try:
-            conexion = sqlite3.connect("Usuarios")
-            cursor = conexion.cursor()
+    if existeUsuario(idElegido) == True:
+        seguro = messagebox.askyesno("Precaución", f'''Seguro que quieres borrar el registro {idElegido}?
+        Almacena los datos: {sacar_usuario_txt(idElegido)}''')
+        
+        if seguro == 1: # askyesno devuelve 1 como yes y vacio como no
+            try:
+                conexion = sqlite3.connect("Usuarios")
+                cursor = conexion.cursor()
 
-            cursor.execute(f'''DELETE FROM DATOSUSUARIOS WHERE ID="{idElegido}"; ''')
-            conexion.commit()
-            messagebox.showinfo("Borrado OK", f"Registro id:{idElegido} borrado con éxito")
-        except Exception as ex:
-            messagebox.showerror("Error al borrar", 
-            f''' No se ha podido borrar el registro con id: {idElegido}:
-            {str(ex)}''')
+                cursor.execute(f'''DELETE FROM DATOSUSUARIOS WHERE ID="{idElegido}"; ''')
+                conexion.commit()
+                messagebox.showinfo("Borrado OK", f"Registro id:{idElegido} borrado con éxito")
+                borrar_campos()
+            except Exception as ex:
+                messagebox.showerror("Error al borrar", 
+                f''' No se ha podido borrar el registro con id: {idElegido}:
+                {str(ex)}''')
     else:
-        messagebox.showinfo("", int(seguro))
+        messagebox.showinfo("No existe el ID", f"Lo siento, no existe el registro con ID {idElegido}")
 
+
+# Funcion para saber si existe un registro por su ID
+def existeUsuario(idElegido):
+    try:
+        conexion = sqlite3.connect("Usuarios")
+        cursor = conexion.cursor()
+
+        cursor.execute(f'''SELECT COUNT(*) FROM DATOSUSUARIOS WHERE ID={idElegido}; ''')
+        conexion.commit()
+        resultado = cursor.fetchone()
+        if str(resultado[0]) == '0':
+            return False
+        elif str(resultado[0]) == '1':
+            return True
+
+    except:
+        pass
 
 
 # ------------------------------------------------------------------------------------
@@ -267,12 +301,18 @@ def btnAnterior():
 def btnSiguiente():
     conexion = sqlite3.connect('Usuarios')
     miCursor = conexion.cursor()
+    miUsuario = []
 
-    if miId.get() != None:
+    if len(miId.get()) > 0:
         idElegido = miId.get()
         miCursor.execute(f'''SELECT ID, NOMBRE_USUARIO, PASSWORD, APELLIDOS,DIRECCION, COMENTARIOS
         FROM DATOSUSUARIOS WHERE ID > {idElegido} ORDER BY ID LIMIT 1;''')
         miUsuario = miCursor.fetchall()
+    else:
+        miCursor.execute(f'''SELECT ID, NOMBRE_USUARIO, PASSWORD, APELLIDOS,DIRECCION, COMENTARIOS
+        FROM DATOSUSUARIOS ORDER BY ID DESC LIMIT 1;''')
+        miUsuario = miCursor.fetchall()
+
 
     # Si encontramos algun registro, pues borramos los campos y pasamos los datos
     if  len(miUsuario)>0:
@@ -311,8 +351,8 @@ crudMenu.add_command(label="Actualizar", command=actualizar_registro)
 crudMenu.add_command(label="Borrar", command=borrar_registro)
 
 #El cuarto y ultimo submenu tendra elementos de ayuda
-ayudaMenu.add_command(label="Licencia")
-ayudaMenu.add_command(label="Acerca de...")
+ayudaMenu.add_command(label="Licencia", command =licencia)
+ayudaMenu.add_command(label="Acerca de...", command=acercaDe)
 
 # Ahora tenemos que pasar cada barra de menu a la interfaz dandole un nombre
 barraMenu.add_cascade(label="BBDD", menu=bbddMenu)
