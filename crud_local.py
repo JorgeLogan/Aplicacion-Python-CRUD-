@@ -86,6 +86,15 @@ def pedirID(texto):
 
 
 # ------------------------------------------------------------------------------------
+#                                  CRUD 
+# Para realizar las consultas con el cursor, usaremos siempre fetchall, 
+# aunque solo busquemos un objeto. 
+# La razon es: 
+#   fetchall devuelve una lista de tuplas 
+#   fetchone devuelve una tupla. 
+# De cara a trabajar vamos a necesitar objetos del tipo lista de tuplas
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 # Funcion CRUD --> CREATE : Insertar campo
 def insertar_registro():
     try:
@@ -117,26 +126,28 @@ def seleccionar():
     seleccionarPorId(idElegido)
 
 
+
 # -----------------------------------------------------------------------------------
+# Funcion para seleccionar un registro basandose en el ID.
 def seleccionarPorId(idElegido):
     miConexion = sqlite3.connect("Usuarios")
     miCursor = miConexion.cursor()
     miCursor.execute(f'''SELECT ID, NOMBRE_USUARIO, PASSWORD, APELLIDOS, DIRECCION, COMENTARIOS
     FROM DATOSUSUARIOS WHERE ID="{idElegido}"''')
     
-    usuario = miCursor.fetchall() # Si hiceramos fetch one solo cogeria un campo
+    usuario = miCursor.fetchall() 
     pasarUsuarioCampos(usuario)
 
 
 
-
 # ---------------------------------------------------------------------------------
-
+# Funcion para pasar un usuario (en formato lista de tuplas) a los campos de la app
 def pasarUsuarioCampos(usuario):
     try:
+        print(usuario)
         if len(usuario) > 0:       
             for dts_usuario in usuario:
-                miId.set(dts_usuario[0])
+                miId.set(str(dts_usuario[0]))
                 miNombre.set(dts_usuario[1])
                 miPass.set(dts_usuario[2])
                 miApellido.set(dts_usuario[3])
@@ -144,7 +155,8 @@ def pasarUsuarioCampos(usuario):
                 # Para el text usamos el metodo insert, dandole la posicion de inicio
                 cuadroComentario.insert(1.0, dts_usuario[5])
     except Exception as ex:
-        print(str(ex))
+        print("Error en pasarUsuarioCampos: " + str(ex))
+
 
 
 # ------------------------------------------------------------------------------------
@@ -170,7 +182,8 @@ def actualizar_registro():
         messagebox.showinfo("Actualización OK", f'''Actualización del registro {idUsuario} 
         realizada con éxito''')
     except Exception as ex:
-        messagebox.showerror("Error en la actualización", f"Error producido en la actualización: {str(ex)}")
+        messagebox.showerror("Error en la actualización", 
+        f"Error producido en la actualización: {str(ex)}")
 
 
 
@@ -200,6 +213,8 @@ def borrar_registro():
 
 # ------------------------------------------------------------------------------------
 # Funcion para sacar en formato texto los datos de un usuario
+# Usaremos esta funcion en la anterior, la de borrar registro, mostrando antes de borrar
+# el registro que intentamos borrar, mediante un mensaje emergente
 def sacar_usuario_txt(idElegido):
     usuario =""
     miConexion = sqlite3.connect("Usuarios")
@@ -211,7 +226,8 @@ def sacar_usuario_txt(idElegido):
     if len(usuario) > 0:
         
         for dts_usuario in usuario:
-            usuario = f'''ID: {idElegido}
+            usuario = f'''
+            ID: str({idElegido})
             Nombre: {dts_usuario[1]} 
             Password: {dts_usuario[2]} 
             Apellidos: {dts_usuario[3]} 
@@ -227,24 +243,41 @@ def sacar_usuario_txt(idElegido):
 def btnAnterior():
     conexion = sqlite3.connect('Usuarios')
     miCursor = conexion.cursor()
-    borrar_campos()
-    
-    if miId.get() != None :
+
+    # Vamos a comprobar que el campo de Id no este vacio, y que sea un valor mayor de cero
+    if len(miId.get()) > 0 and int(miId.get()) > 0:
         idElegido = miId.get()
         miCursor.execute(f'''SELECT ID, NOMBRE_USUARIO, PASSWORD, APELLIDOS,DIRECCION, COMENTARIOS
-        FROM DATOSUSUARIOS WHERE ID < "{idElegido}" ORDER BY ID DESC LIMIT 1;''')
-        miUsuario = miCursor.fetchone()
+        FROM DATOSUSUARIOS WHERE ID < {idElegido} ORDER BY ID DESC LIMIT 1;''')
+        miUsuario = miCursor.fetchall()
 
     else:
-        miCursor.execute(f'''SELECT ID, NOMBRE, PASSWORD, APELLIDOS,DIRECCION, COMENTARIOS
+        miCursor.execute(f'''SELECT ID, NOMBRE_USUARIO, PASSWORD, APELLIDOS,DIRECCION, COMENTARIOS
         FROM DATOSUSUARIOS ORDER BY ID LIMIT 1;''')
-        miUsuario = miCursor.fetchone()
-    
-    pasarUsuarioCampos(miUsuario)
+        miUsuario = miCursor.fetchall()
+
+    # Si encontramos algun registro, pues borramos los campos y pasamos los datos
+    if  len(miUsuario)>0:
+        borrar_campos()
+        pasarUsuarioCampos(miUsuario)
+
+
 
 # -----------------------------------------------------------------------------------
 def btnSiguiente():
-    pass
+    conexion = sqlite3.connect('Usuarios')
+    miCursor = conexion.cursor()
+
+    if miId.get() != None:
+        idElegido = miId.get()
+        miCursor.execute(f'''SELECT ID, NOMBRE_USUARIO, PASSWORD, APELLIDOS,DIRECCION, COMENTARIOS
+        FROM DATOSUSUARIOS WHERE ID > {idElegido} ORDER BY ID LIMIT 1;''')
+        miUsuario = miCursor.fetchall()
+
+    # Si encontramos algun registro, pues borramos los campos y pasamos los datos
+    if  len(miUsuario)>0:
+        borrar_campos()
+        pasarUsuarioCampos(miUsuario)
 
 
 
